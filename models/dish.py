@@ -24,7 +24,7 @@ class Dish:
 
     @classmethod
     def get_by_name(cls, name: str) -> Optional['Dish']:
-        # Ищет пиццу по имени (используется при выборе)
+        # Ищет блюдо по имени (используется при выборе)
         for dish in cls.all_dishes:
             if dish.name == name:
                 return dish
