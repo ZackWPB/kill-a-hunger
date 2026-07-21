@@ -8,14 +8,12 @@ from config.settings import ADMIN_ID
 from models.pizza import Pizza
 from models.order import OrderForm
 from keyboards.main_keyboard import main_kb
+from services.cart_service import CartService
 
 router = Router()
 
 @router.callback_query(OrderForm.choosing_pizza)
 async def process_pizza_callback(callback: CallbackQuery, state: FSMContext):
-    # Обрабатывает выбор пиццы через Inline-кнопки
-
-    # Извлекаем ID пиццы из callback_data
     pizza_id = callback.data
     pizza = Pizza.get_by_id(pizza_id)
 
@@ -23,25 +21,34 @@ async def process_pizza_callback(callback: CallbackQuery, state: FSMContext):
         await callback.answer("❌ Пицца не найдена.")
         return
 
-    # Сохраняем данные в FSM
-    await state.update_data(
-        pizza_id=pizza.dish_id,
-        pizza_name=pizza.name,
-        pizza_price=pizza.price
-    )
+    # Добавляем в корзину
+    await CartService.add_item(state, {
+        "id": pizza.dish_id,
+        "name": pizza.name,
+        "price": pizza.price,
+    })
 
-    # Переходим к вводу адреса
-    await state.set_state(OrderForm.entering_address)
-
-    # Отвечаем на callback, чтобы убрать «часики» на кнопке
+    # Отвечаем на callback
     await callback.answer()
 
-    # Отправляем сообщение с запросом адреса
+    # Получаем корзину
+    cart = await CartService.get_cart(state)
+    total = sum(item["price"] for item in cart)
+
+    # Формирование список пицц в корзине
+    cart_text = "\n".join([
+        f"{item['name']} - {item['price']} ₽"
+        for item in cart
+    ])
+
+    # Отображаем корзину
     await callback.message.edit_text(
-        f"✅ Отлично! {pizza.get_info()}\n\n"
-        "🏠 Теперь напиши адрес доставки:\n"
-        "(Улица, дом, квартира, подъезд, этаж)",
-        parse_mode=None
+        f"🛒 **Твоя корзина:**\n\n"
+        f"{cart_text}\n\n"
+        f"\n\n💰 **Итого: {total} ₽\n\n"
+        "Выбери дейстиве:\n"
+        "Добавить еще - /menu\n"
+        "Оформить заказ - /checkout\n"
     )
 
     # Убираем клавиатуру после выбора
@@ -73,8 +80,8 @@ async def process_phone(message: Message, state: FSMContext, bot: Bot):
     # Формируем красивый отчет для админа
     order_text = (
         f"🔥 **НОВЫЙ ЗАКАЗ!** 🔥\n\n"
-        f"🍕 **Пицца:** {data['pizza_name']}\n"
-        f"💰 **Сумма:** {data['pizza_price']} ₽\n"
+        f"🍕 **Пицца:** \n"
+        f"💰 **Сумма:**  \n"
         f"📍 **Адрес:** {data['address']}\n"
         f"📞 **Телефон:** {data['phone']}\n"
         f"👤 **Клиент:** @{message.from_user.username or 'нет юзернейма'} (ID: {message.from_user.id})\n"

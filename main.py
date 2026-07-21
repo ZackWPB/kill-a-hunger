@@ -17,13 +17,14 @@ from handlers.order import router as order_router
 from handlers.menu import router as menu_router
 from handlers.contacts import router as contacts_router
 from handlers.help import router as help_router
+from handlers.cart import router as cart_router
 
 dp.include_router(start_router)
 dp.include_router(order_router)
 dp.include_router(menu_router)
 dp.include_router(contacts_router)
 dp.include_router(help_router)
-
+dp.include_router(cart_router)
 
 async def main():
     print("🎸 Kill a Hunger запущен!")
